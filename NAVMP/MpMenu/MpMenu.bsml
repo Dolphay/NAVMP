@@ -1,0 +1,6 @@
+﻿<vertical pref-width='80'>
+    <horizontal>
+        <text text='Notes Per Second:' color='grey' font-size=3></text>
+        <text-segments id='npsMenu' />
+    </horizontal>
+</vertical>
