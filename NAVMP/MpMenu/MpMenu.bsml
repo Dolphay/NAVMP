@@ -1,6 +1,22 @@
 ﻿<vertical pref-width='80'>
     <horizontal>
-        <text text='Notes Per Second:' color='grey' font-size=3></text>
+        <text text='Notes Per Second:' color='grey' font-size='3'></text>
         <text-segments id='npsMenu' />
+    </horizontal>
+    <horizontal>
+        <text text='Beat Leader Stars:' color='grey' font-size='3'></text>
+        <text-segments id='blStarsMenu' />
+    </horizontal>
+    <horizontal>
+        <text text='Beat Leader Tech Stars:' color='grey' font-size='3'></text>
+        <text-segments id='blTechStarsMenu' />
+    </horizontal>
+    <horizontal>
+        <text text='Beat Leader Acc Stars:' color='grey' font-size='3'></text>
+        <text-segments id='blAccStarsMenu' />
+    </horizontal>
+    <horizontal>
+        <text text='Beat Leader Pass Stars:' color='grey' font-size='3'></text>
+        <text-segments id='blPassStarsMenu' />
     </horizontal>
 </vertical>

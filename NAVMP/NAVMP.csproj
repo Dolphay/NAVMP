@@ -189,6 +189,11 @@
             <Private>False</Private>
             <SpecificVersion>False</SpecificVersion>
         </Reference>
+        <Reference Include="BeatLeader" Publicize="true">
+            <HintPath>$(BeatSaberDir)\Plugins\BeatLeader.dll</HintPath>
+            <Private>False</Private>
+            <SpecificVersion>False</SpecificVersion>
+        </Reference>
         <Reference Include="System.IO.Compression">
             <HintPath>$(BeatSaberDir)\Libs\System.IO.Compression.dll</HintPath>
             <Private>False</Private>
