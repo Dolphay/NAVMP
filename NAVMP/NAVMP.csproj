@@ -27,10 +27,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="NAVMP.csproj.user" Condition="Exists('NAVMP.csproj.user')"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <Reference Include="netstandard"/>
         <Reference Include="Microsoft.CSharp">
             <!--<HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\Microsoft.CSharp.dll</HintPath>
