@@ -11,6 +11,8 @@ using System.Linq;
 using System.Reflection;
 using MultiplayerCore.UI;
 using MultiplayerCore.Beatmaps;
+using BeatLeader.DataManager;
+using BeatLeader.Models;
 using Zenject;
 
 namespace NAVMP.MpMenu;
@@ -25,9 +27,11 @@ internal class MpMenu : IInitializable, IDisposable
     private readonly ILobbyGameStateController _gameStateController;
     private readonly MpBeatmapLevelProvider _beatmapLevelProvider;
     private readonly MpPerPlayerUI _perPlayerUI;
+    private readonly LeaderboardInfoManager _leaderboardInfoManager;
     private BeatmapKey _currentBeatmapKey;
     private List<string>? _npsDiffList;
     private List<string>? _allowedDiffs;
+    private List<LeaderboardsCache.LeaderboardCacheEntry>? _beatleaderCacheEntries;
 
     private readonly SiraLog _logger;
 
@@ -35,6 +39,7 @@ internal class MpMenu : IInitializable, IDisposable
         GameServerLobbyFlowCoordinator gameServerLobbyFlowCoordinator,
         MpBeatmapLevelProvider beatmapLevelProvider,
         MpPerPlayerUI perPlayerUI,
+        LeaderboardInfoManager leaderboardInfoManager,
         SiraLog logger)
     {
         _gameServerLobbyFlowCoordinator = gameServerLobbyFlowCoordinator;
@@ -42,6 +47,7 @@ internal class MpMenu : IInitializable, IDisposable
         _gameStateController = _gameServerLobbyFlowCoordinator._lobbyGameStateController;
         _beatmapLevelProvider = beatmapLevelProvider;
         _perPlayerUI = perPlayerUI;
+        _leaderboardInfoManager = leaderboardInfoManager;
         _logger = logger;
     }
 
@@ -51,6 +57,10 @@ internal class MpMenu : IInitializable, IDisposable
 
     [UIComponent("npsDisplay")] private TextSegmentedControl? npsDisplay;
     [UIComponent("npsMenu")] private TextSegmentedControl? npsMenu;
+    [UIComponent("blStarsMenu")] private TextSegmentedControl? blStarsMenu;
+    [UIComponent("blTechStarsMenu")] private TextSegmentedControl? blTechStarsMenu;
+    [UIComponent("blAccStarsMenu")] private TextSegmentedControl? blAccStarsMenu;
+    [UIComponent("blPassStarsMenu")] private TextSegmentedControl? blPassStarsMenu;
 
 #pragma warning restore IDE0044 // Add modifier "readonly"
 #pragma warning restore 0649 // Field is never assigned to, and will always have its default value
@@ -61,7 +71,7 @@ internal class MpMenu : IInitializable, IDisposable
         BSMLParser.Instance.Parse(
             Utilities.GetResourceContent(Assembly.GetExecutingAssembly(),
                 NpsDisplayResourcePath), _perPlayerUI.segmentVert?.gameObject, this);
-        
+
         GameplaySetup.Instance.AddTab(MpMenuTab, MpMenuResourcePath, this);
 
         // Check UI Elements
@@ -80,16 +90,93 @@ internal class MpMenu : IInitializable, IDisposable
         _gameServerLobbyFlowCoordinator._serverPlayerListViewController.selectSuggestedBeatmapEvent +=
             UpdateNpsListWithBeatmapKey;
         _lobbyViewController.clearSuggestedBeatmapEvent += ClearLocalSelectedBeatmap;
+        LeaderboardsCache.CacheWasChangedEvent += UpdateBeatLeaderStats;
     }
 
     public void Dispose()
     {
         GameplaySetup.Instance.RemoveTab(MpMenuTab);
+        LeaderboardsCache.CacheWasChangedEvent -= UpdateBeatLeaderStats;
+    }
+
+    private void SetAllCellsState(TextSegmentedControl? control, bool state)
+    {
+        foreach (var cell in control!.cells)
+        {
+            cell.interactable = state;
+        }
+    }
+
+    private void UpdateBeatLeaderStats()
+    {
+        var songAvailable = LeaderboardsCache.TryGetLeaderboardInfo(LeaderboardKey.FromBeatmap(_currentBeatmapKey),
+            out var data);
+
+        if (songAvailable && _allowedDiffs is not null)
+        {
+            _beatleaderCacheEntries = new List<LeaderboardsCache.LeaderboardCacheEntry>();
+            foreach (var difficulty in _allowedDiffs)
+            {
+                if (!Enum.TryParse<BeatmapDifficulty>(difficulty.Replace("Expert+", "ExpertPlus"), out var result))
+                    continue;
+                var beatmapKey = new BeatmapKey(this._currentBeatmapKey.levelId,
+                    _currentBeatmapKey.beatmapCharacteristic, result);
+
+                LeaderboardsCache.TryGetLeaderboardInfo(LeaderboardKey.FromBeatmap(beatmapKey),
+                    out data);
+
+                _beatleaderCacheEntries.Add(data);
+            }
+
+            blStarsMenu?.SetTexts((from entry in _beatleaderCacheEntries
+                select entry.DifficultyInfo.stars.ToString("0.00")).ToList());
+            blTechStarsMenu?.SetTexts((from entry in _beatleaderCacheEntries
+                select entry.DifficultyInfo.techRating.ToString("0.00")).ToList());
+            blAccStarsMenu?.SetTexts((from entry in _beatleaderCacheEntries
+                select entry.DifficultyInfo.accRating.ToString("0.00")).ToList());
+            blPassStarsMenu?.SetTexts((from entry in _beatleaderCacheEntries
+                select entry.DifficultyInfo.passRating.ToString("0.00")).ToList());
+        }
+        else
+        {
+            var hash = MultiplayerCore.Utilities.HashForLevelID(_currentBeatmapKey.levelId);
+
+            if (hash is not null)
+            {
+                _leaderboardInfoManager.UpdateLeaderboardsByHash(hash);
+            }
+
+            var emptyList = (from diff in _allowedDiffs select "Loading").ToList();
+            blStarsMenu?.SetTexts(emptyList);
+            blTechStarsMenu?.SetTexts(emptyList);
+            blAccStarsMenu?.SetTexts(emptyList);
+            blPassStarsMenu?.SetTexts(emptyList);
+        }
+        
+        SetAllCellsState(blStarsMenu, false);
+        SetAllCellsState(blTechStarsMenu, false);
+        SetAllCellsState(blAccStarsMenu, false);
+        SetAllCellsState(blPassStarsMenu, false);
+    }
+
+    private void SetActiveDifficulty(int index)
+    {
+        npsDisplay?.SelectCellWithNumber(index);
+        npsMenu?.SelectCellWithNumber(index);
+        blStarsMenu?.SelectCellWithNumber(index);
+        blTechStarsMenu?.SelectCellWithNumber(index);
+        blAccStarsMenu?.SelectCellWithNumber(index);
+        blPassStarsMenu?.SelectCellWithNumber(index);
     }
 
     private void HideCustomMetrics()
     {
         npsMenu?.SetTexts(new string[] { });
+        blStarsMenu?.SetTexts(new string[] { });
+        blTechStarsMenu?.SetTexts(new string[] { });
+        blAccStarsMenu?.SetTexts(new string[] { });
+        blPassStarsMenu?.SetTexts(new string[] { });
+
         npsDisplay?.SetTexts(new string[] { });
         npsDisplay?.gameObject.SetActive(false);
     }
@@ -150,20 +237,19 @@ internal class MpMenu : IInitializable, IDisposable
                             .Contains(diff.Item1)
                         select diff.Item2.ToString()
                     ).ToList();
-                
+
                 npsDisplay?.gameObject.SetActive(true);
                 npsDisplay?.SetTexts(_npsDiffList);
                 npsMenu?.SetTexts(_npsDiffList);
+                SetAllCellsState(npsMenu, false);
+
+                UpdateBeatLeaderStats();
 
                 if (_allowedDiffs?.Count > 1)
                 {
                     int index = _allowedDiffs.IndexOf(_perPlayerUI.DiffToStr(_currentBeatmapKey.difficulty));
                     if (index > 0)
-                    {
-                        
-                    }
-                        npsMenu?.SelectCellWithNumber(index);
-                        npsDisplay?.SelectCellWithNumber(index);
+                        SetActiveDifficulty(index);
                 }
             }
         );
@@ -175,11 +261,8 @@ internal class MpMenu : IInitializable, IDisposable
 
     private void SetLobbyState(MultiplayerLobbyState lobbyState)
     {
-        foreach (var cell in npsDisplay!.cells)
-        {
-            cell.interactable = lobbyState == MultiplayerLobbyState.LobbySetup ||
-                                lobbyState == MultiplayerLobbyState.LobbyCountdown;
-        }
+        SetAllCellsState(npsDisplay,
+            lobbyState == MultiplayerLobbyState.LobbySetup || lobbyState == MultiplayerLobbyState.LobbyCountdown);
     }
 
     private Dictionary<string, List<(BeatmapDifficulty, double)>> GetNpsFromBeatSaverMap(BeatSaverBeatmapLevel beatmap)
@@ -212,6 +295,7 @@ internal class MpMenu : IInitializable, IDisposable
                     throw new ArgumentOutOfRangeException("Difficulty",
                         $"Unexpected difficulty value: {difficulty1.Difficulty}");
             }
+
             BeatmapDifficulty beatmapDifficulty2 = beatmapDifficulty1;
             if (!nps.ContainsKey(key))
                 nps.Add(key, new List<(BeatmapDifficulty, double)>());
@@ -234,12 +318,15 @@ internal class MpMenu : IInitializable, IDisposable
             {
                 try
                 {
-                    if (GetNpsFromBeatSaverMap(beatSaverLevel)[_currentBeatmapKey.beatmapCharacteristic.serializedName].Count == 0)
+                    if (GetNpsFromBeatSaverMap(beatSaverLevel)[_currentBeatmapKey.beatmapCharacteristic.serializedName]
+                            .Count == 0)
                     {
                         HideCustomMetrics();
                     }
 
-                    UpdateNpsList(GetNpsFromBeatSaverMap(beatSaverLevel)[_currentBeatmapKey.beatmapCharacteristic.serializedName]);
+                    UpdateNpsList(
+                        GetNpsFromBeatSaverMap(beatSaverLevel)[
+                            _currentBeatmapKey.beatmapCharacteristic.serializedName]);
                 }
                 catch (Exception e)
                 {
@@ -254,7 +341,7 @@ internal class MpMenu : IInitializable, IDisposable
         _currentBeatmapKey = state.beatmapKey;
 
         var levelHash = MultiplayerCore.Utilities.HashForLevelID(_currentBeatmapKey.levelId);
-        if (levelHash == null) 
+        if (levelHash == null)
         {
             HideCustomMetrics();
             return;
@@ -272,8 +359,8 @@ internal class MpMenu : IInitializable, IDisposable
 
     #region UIValues
 
-    [UIAction("SetNps")]
-    public void SetNps(TextSegmentedControl _, int index)
+    [UIAction("SetDifficulty")]
+    public void SetDifficulty(TextSegmentedControl _, int index)
     {
         var difficultyControl = _perPlayerUI.difficultyControl;
 
@@ -282,12 +369,14 @@ internal class MpMenu : IInitializable, IDisposable
             difficultyControl.SelectCellWithNumber(index);
             _perPlayerUI.SetSelectedDifficulty(difficultyControl, index);
         }
+
+        SetActiveDifficulty(index);
     }
 
 
     public void SetDifficulty(SegmentedControl _, int index)
     {
-        npsDisplay?.SelectCellWithNumber(index);
+        SetActiveDifficulty(index);
     }
 
     #endregion
