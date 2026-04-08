@@ -4,8 +4,8 @@
 
   <!-- Plugin Metadata -->
   <PropertyGroup>
-    <PluginId>NAVMP_Mod</PluginId>
-    <PluginName>NAVMP_Mod</PluginName>
+    <PluginId>NAVMP</PluginId>
+    <PluginName>NAVMP</PluginName>
     <Authors>Dolphay</Authors>
     <Version>0.0.3</Version>
     <GameVersion>1.40.8</GameVersion>
