@@ -235,7 +235,7 @@ internal class MpMenu : IInitializable, IDisposable
                 _npsDiffList = (from diff in difficulties
                         where _gameServerLobbyFlowCoordinator._unifiedNetworkPlayerModel.selectionMask.difficulties
                             .Contains(diff.Item1)
-                        select diff.Item2.ToString()
+                        select diff.Item2.ToString("0.00")
                     ).ToList();
 
                 npsDisplay?.gameObject.SetActive(true);
@@ -248,7 +248,7 @@ internal class MpMenu : IInitializable, IDisposable
                 if (_allowedDiffs?.Count > 1)
                 {
                     int index = _allowedDiffs.IndexOf(_perPlayerUI.DiffToStr(_currentBeatmapKey.difficulty));
-                    if (index > 0)
+                    if (index > -1)
                         SetActiveDifficulty(index);
                 }
             }
