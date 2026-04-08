@@ -7,7 +7,7 @@
     <PluginId>NAVMP_Mod</PluginId>
     <PluginName>NAVMP_Mod</PluginName>
     <Authors>Dolphay</Authors>
-    <Version>0.0.1</Version>
+    <Version>0.0.3</Version>
     <GameVersion>1.40.8</GameVersion>
     <Description>A mod that improves the MP experience for beatsaber.</Description>
     <!--<PluginIcon></PluginIcon>-->
